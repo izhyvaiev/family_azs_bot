@@ -1,0 +1,27 @@
+{
+  "name": "family_azs_bot",
+  "version": "1.0.0",
+  "description": "Shows azs prices and discounts for family",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "telegraf": "^3.25.5"
+  },
+  "dependencies": {
+    "@google/maps": "^0.5.5",
+    "@types/googlemaps": "^3.30.16",
+    "@types/node-fetch": "^2.1.4",
+    "@types/sequelize": "^4.27.33",
+    "jsdom": "^13.1.0",
+    "moment": "^2.23.0",
+    "moment-timezone": "^0.5.23",
+    "mysql2": "^1.6.4",
+    "node-fetch": "^2.3.0",
+    "sequelize": "^4.42.0",
+    "sequelize-cli": "^5.4.0"
+  }
+}
