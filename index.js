@@ -73,7 +73,7 @@ bot.on('location', (ctx) => {
 
 							if (cumulativeDiscountAmount > exclusiveDiscountAmount) {
 								prices[station.code] -= cumulativeDiscountAmount;
-								station.discounts = station.discounts.filter(({exclusive}) => parseInt(exclusive) === 0);
+								station.discounts = station.discounts.filter(({exclusive}) => !exclusive);
 							} else {
 								prices[station.code] -= exclusiveDiscountAmount;
 								station.discounts = [exclusiveDiscount];
