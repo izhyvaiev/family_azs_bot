@@ -3,13 +3,13 @@ const session = require('telegraf/session');
 const fetch = require('node-fetch');
 const {getPrices, mapDistance, chainLocations, filterSameLocations} = require('./functions')
 const googleMapsClient = require('@google/maps').createClient({
-	key: '',
+	key: process.env.MAPS_KEY,
 	Promise
 });
 const models = require('./models/index');
 const Op = require('sequelize').Op;
 const moment = require('moment-timezone');
-const bot = new Telegraf('');
+const bot = new Telegraf(process.env.BOT_KEY);
 const filterFunction = ({types}) => types.includes('administrative_area_level_1');
 
 

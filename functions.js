@@ -83,7 +83,6 @@ const filterSameLocations = locations => {
 		const distances = distance(lastLatLng.lat, lastLatLng.lng, lat, lng);
 		lastLatLng.lat = lat;
 		lastLatLng.lng = lng;
-		console.log({distances});
 		return distances > 0.01;
 	})
 }
