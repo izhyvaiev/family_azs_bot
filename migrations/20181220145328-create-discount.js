@@ -13,7 +13,7 @@ module.exports = {
 	    description: {type: Sequelize.TEXT}
     });
   },
-  down: (queryInterface, Sequelize) => {
+  down: (queryInterface) => {
     return queryInterface.dropTable('discounts');
   }
 };

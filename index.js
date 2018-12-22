@@ -17,8 +17,9 @@ bot.start((ctx) => ctx.reply('Отправь локацию'))
 bot.help((ctx) => ctx.reply('Отправь локацию'))
 bot.use(session());
 bot.on('location', (ctx) => {
-	const {update: {message: {from, chat, location: {latitude, longitude}}}} = ctx;
+	const {update: {message: {from: {id}, location: {latitude, longitude}}}} = ctx;
 	const location = {lat: latitude, lng: longitude};
+	const user = (id === 144005044 ? 'Ivan' : 'Dasha');
 
 	return googleMapsClient.reverseGeocode({
 		latlng: location,
@@ -46,14 +47,38 @@ bot.on('location', (ctx) => {
 								'start_date': {
 									[Op.lte]: moment().tz('Europe/Kiev').format('YYYY-MM-DD')
 								}
+							},
+							[Op.and]: {
+								'user': {
+									[Op.in]: ['All', user]
+								}
 							}
 						}
 					}]
 				}).then(azs => {
 					for (const station of azs) {
-						station.discounts.forEach(({amount}) => {
-							prices[station.code] -= amount;
-						});
+						if (station.discounts.length > 0) {
+							let cumulativeDiscountAmount = 0,
+								exclusiveDiscountAmount = 0,
+								exclusiveDiscount = null;
+							station.discounts.forEach(discount => {
+								const {amount, exclusive} = discount;
+								if (!exclusive) {
+									cumulativeDiscountAmount +=  parseFloat(amount)
+								} else if (amount > exclusiveDiscountAmount) {
+									exclusiveDiscountAmount = parseFloat(amount);
+									exclusiveDiscount = discount;
+								}
+							});
+
+							if (cumulativeDiscountAmount > exclusiveDiscountAmount) {
+								prices[station.code] -= cumulativeDiscountAmount;
+								station.discounts = station.discounts.filter(({exclusive}) => parseInt(exclusive) === 0);
+							} else {
+								prices[station.code] -= exclusiveDiscountAmount;
+								station.discounts = [exclusiveDiscount];
+							}
+						}
 					}
 					const promises = [];
 					let brands = Object.keys(prices).sort(function(a,b){return prices[a]-prices[b]});
@@ -101,9 +126,7 @@ bot.hears(/^\d+$/, (ctx) => {
 			ctx.replyWithPhoto({source: `./images/${brand.image}`}).then(() =>
 				Promise.all(
 					brand.discounts.map(({amount, description}) => ctx.reply(`-${amount}грн, ${description}`))
-				).then(() => {
-
-				})
+				)
 			)
 		})
 	} else {

@@ -8,7 +8,7 @@ module.exports = {
 	    qrCodeImage: {type: Sequelize.STRING(256), field: 'qr_code_image'},
     });
   },
-  down: (queryInterface, Sequelize) => {
+  down: (queryInterface) => {
     return queryInterface.dropTable('azs');
   }
 };
