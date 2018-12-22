@@ -13,7 +13,7 @@ const bot = new Telegraf('');
 const filterFunction = ({types}) => types.includes('administrative_area_level_1');
 
 
-bot.start((ctx) => ctx.reply('Привет'))
+bot.start((ctx) => ctx.reply('Отправь локацию'))
 bot.help((ctx) => ctx.reply('Отправь локацию'))
 bot.use(session());
 bot.on('location', (ctx) => {
@@ -107,7 +107,7 @@ bot.hears(/^\d+$/, (ctx) => {
 			)
 		})
 	} else {
-		ctx.reply('pass location')
+		ctx.reply('Отправь локацию')
 	}
 })
 bot.startPolling();
