@@ -22,22 +22,23 @@ const getPrices = (body, name) => {
 				continue;
 			}
 			const brand = cells[0].textContent.toLowerCase();
-			const price = parseFloat(cells[2].textContent.replace(',','.'))
+			const premium = parseFloat(cells[2].textContent.replace(',','.'))
+			const regular = parseFloat(cells[3].textContent.replace(',','.'))
 			switch(brand) {
 				case 'wog':
-					wog = price;
+					wog = {premium, regular};
 					break;
 				case 'shell':
-					shell = price;
+					shell = {premium};
 					break;
 				case 'окко':
-					okko = price;
+					okko = {premium, regular};
 					break;
 				case 'glusco':
-					glusco = price;
+					glusco = {premium, regular};
 					break;
 				case 'socar':
-					socar = price;
+					socar = {premium, regular};
 					break;
 			}
 		}

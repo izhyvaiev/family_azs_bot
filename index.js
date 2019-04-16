@@ -11,10 +11,15 @@ const Op = require('sequelize').Op;
 const moment = require('moment-timezone');
 const bot = new Telegraf(process.env.BOT_KEY);
 const filterFunction = ({types}) => types.includes('administrative_area_level_1');
+const keyboardMarkup = {
+	reply_markup: {
+		keyboard: [[{text: "Отправить локацию", request_location: true}]],
+		resize_keyboard: true,
+	}
+};
 
-
-bot.start((ctx) => ctx.reply('Отправь локацию'))
-bot.help((ctx) => ctx.reply('Отправь локацию'))
+bot.start((ctx) => ctx.reply('Отправь локацию', keyboardMarkup))
+bot.help((ctx) => ctx.reply('Отправь локацию', keyboardMarkup))
 bot.use(session());
 bot.on('location', (ctx) => {
 	const {update: {message: {from: {id}, location: {latitude, longitude}}}} = ctx;
@@ -72,16 +77,20 @@ bot.on('location', (ctx) => {
 							});
 
 							if (cumulativeDiscountAmount > exclusiveDiscountAmount) {
-								prices[station.code] -= cumulativeDiscountAmount;
-								station.discounts = station.discounts.filter(({exclusive}) => !exclusive);
+								for (let fuelType of Object.keys(prices[station.code])) {
+									prices[station.code][fuelType] -= cumulativeDiscountAmount;
+									station.discounts = station.discounts.filter(({exclusive}) => !exclusive);
+								}
 							} else {
-								prices[station.code] -= exclusiveDiscountAmount;
-								station.discounts = [exclusiveDiscount];
+								for (let fuelType of Object.keys(prices[station.code])) {
+									prices[station.code][fuelType] -= exclusiveDiscountAmount;
+									station.discounts = [exclusiveDiscount];
+								}
 							}
 						}
 					}
 					const promises = [];
-					let brands = Object.keys(prices).sort(function(a,b){return prices[a]-prices[b]});
+					let brands = Object.keys(prices).sort(function(a,b){return prices[a].premium-prices[b].premium});
 					for (const brand of brands) {
 						promises.push(googleMapsClient.places({
 							query: brand,
@@ -93,6 +102,7 @@ bot.on('location', (ctx) => {
 					ctx.session.brands = {};
 					return Promise.all(promises).then(locations => {
 						let text = '';
+						const markup = [];
 						for (const i in brands) {
 							if (locations[i] !== null) {
 								const brandLocations =  mapDistance(locations[i], location);
@@ -104,12 +114,23 @@ bot.on('location', (ctx) => {
 									discounts: azs.find(({code}) => code === brand).discounts,
 									locations: brandLocations
 								};
-								text += `${j}) ${brand.toUpperCase()} ${prices[brand].toFixed(2)} ${distance}км\n`;
+								markup.push([
+									{text: brand.toUpperCase(), callback_data: j},
+									{text: prices[brand].premium.toFixed(2), callback_data: j},
+									{text: typeof prices[brand].regular !== 'undefined'
+											? prices[brand].regular.toFixed(2) : '-',
+										callback_data: j},
+									{text: distance + "км", callback_data: j},
+								]);
 							}
 						}
 
-						return ctx.reply(text)
-					})
+						return ctx.reply("Выберите АЗС", {
+							reply_markup: {
+								inline_keyboard: markup,
+							}
+						})
+					});
 				});
 			});
 	})
@@ -117,9 +138,9 @@ bot.on('location', (ctx) => {
 		console.log(err);
 	});
 });
-
-bot.hears(/^\d+$/, (ctx) => {
-	const id = parseInt(ctx.update.message.text);
+bot.on('callback_query', (ctx) => {
+	const id = parseInt(ctx.callbackQuery.data);
+	ctx.answerCbQuery()
 	if (ctx.session.brands){
 		const brand = ctx.session.brands[id];
 		chainLocations(ctx, filterSameLocations(brand.locations).slice(0, 3)).then(() => {
@@ -130,7 +151,10 @@ bot.hears(/^\d+$/, (ctx) => {
 			)
 		})
 	} else {
-		ctx.reply('Отправь локацию')
+		ctx.reply('Отправь локацию', keyboardMarkup)
 	}
+})
+bot.hears(/^.*$/, (ctx) => {
+	console.log(ctx.update.message.text);
 })
 bot.startPolling();
