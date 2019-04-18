@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
 	  description: {type: DataTypes.TEXT},
 	  exclusive: {type: DataTypes.BOOLEAN},
 	  user: {type: DataTypes.ENUM, values: ['All', 'Dasha', 'Ivan']},
+	  isPercent: {type: DataTypes.INTEGER, field: 'is_percent'},
   }, {timestamps: false});
   Discount.associate = function(models) {
     Discount.belongsTo(models.azs, {as: 'azs', foreignKey: 'azs_id'});

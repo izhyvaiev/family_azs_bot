@@ -39,6 +39,7 @@ bot.on('location', (ctx) => {
 			.then(res => res.text())
 			.then(res => getPrices(res, name))
 			.then(prices => {
+				ctx.session.prices = prices;
 				models.azs.findAll({
 					include: [{
 						model: models.discount,
@@ -63,26 +64,29 @@ bot.on('location', (ctx) => {
 				}).then(azs => {
 					for (const station of azs) {
 						if (station.discounts.length > 0) {
-							let cumulativeDiscountAmount = 0,
-								exclusiveDiscountAmount = 0,
-								exclusiveDiscount = null;
-							station.discounts.forEach(discount => {
-								const {amount, exclusive} = discount;
-								if (!exclusive) {
-									cumulativeDiscountAmount +=  parseFloat(amount)
-								} else if (amount > exclusiveDiscountAmount) {
-									exclusiveDiscountAmount = parseFloat(amount);
-									exclusiveDiscount = discount;
-								}
-							});
+							for (let fuelType of Object.keys(prices[station.code])) {
+								let cumulativeDiscountAmount = 0,
+									exclusiveDiscountAmount = 0,
+									exclusiveDiscount = null;
+								station.discounts.forEach(discount => {
+									let {amount, exclusive, isPercent} = discount;
 
-							if (cumulativeDiscountAmount > exclusiveDiscountAmount) {
-								for (let fuelType of Object.keys(prices[station.code])) {
+									if (isPercent) {
+										amount = prices[station.code][fuelType] * amount / 100;
+									}
+
+									if (!exclusive) {
+										cumulativeDiscountAmount += parseFloat(amount)
+									} else if (amount > exclusiveDiscountAmount) {
+										exclusiveDiscountAmount = parseFloat(amount);
+										exclusiveDiscount = discount;
+									}
+								});
+
+								if (cumulativeDiscountAmount > exclusiveDiscountAmount) {
 									prices[station.code][fuelType] -= cumulativeDiscountAmount;
 									station.discounts = station.discounts.filter(({exclusive}) => !exclusive);
-								}
-							} else {
-								for (let fuelType of Object.keys(prices[station.code])) {
+								} else {
 									prices[station.code][fuelType] -= exclusiveDiscountAmount;
 									station.discounts = [exclusiveDiscount];
 								}
@@ -91,6 +95,7 @@ bot.on('location', (ctx) => {
 					}
 					const promises = [];
 					let brands = Object.keys(prices).sort(function(a,b){return prices[a].premium-prices[b].premium});
+					ctx.session.brandNames = brands;
 					for (const brand of brands) {
 						promises.push(googleMapsClient.places({
 							query: brand,
@@ -146,8 +151,20 @@ bot.on('callback_query', (ctx) => {
 		chainLocations(ctx, filterSameLocations(brand.locations).slice(0, 3)).then(() => {
 			ctx.replyWithPhoto({source: `./images/${brand.image}`}).then(() =>
 				Promise.all(
-					brand.discounts.map(({amount, description}) => ctx.reply(`-${amount}грн, ${description}`))
-				)
+					brand.discounts.map(({amount, description, isPercent}) => {
+						let text;
+						if (isPercent) {
+							const brandName = ctx.session.brandNames[id];
+							const prices = Object.values(ctx.session.prices[brandName]).sort((a, b) => b - a)
+								.map(price => (price * amount / 100).toFixed(2) + 'грн')
+								.join('/');
+							text = `-${amount}% (${prices}), ${description}`;
+						} else {
+							text = `-${amount}грн, ${description}`;
+						}
+						return ctx.reply(text);
+					})
+			)
 			)
 		})
 	} else {
